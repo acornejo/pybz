@@ -1,3 +1,4 @@
+import meta
 import bzrest
 import keyring
 import getpass
@@ -47,7 +48,7 @@ def print_bug(b, output_fields):
 
 def main():
     # Argument parser
-    parser = argparse.ArgumentParser(description="Python Bugzilla Tool")
+    parser = argparse.ArgumentParser(description=meta.DESCRIPTION + " " + meta.VERSION)
     parser.add_argument('--url', action='store', type=str,
             default=None, help='bugzilla server http url')
     parser.add_argument('--username', action='store', type=str,
@@ -55,7 +56,7 @@ def main():
     parser.add_argument('--password', action='store', type=str,
             default=None, help='bugzilla password')
     parser.add_argument('-k', action='store_true', dest='ssl_verify',
-            default=False, help='allow insecure SSL cert')
+            default=False, help='allow insecure SSL certificate')
     parser.add_argument('-K', action='store_true', dest='use_keyring',
             default=None, help='use keyring to store/retrieve password')
 
