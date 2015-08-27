@@ -61,15 +61,14 @@ class API(object):
 
     def bug_set(self, params):
         bid = params['ids'][0]
-        print params
-        result = self.request('PUT', 'bug/' + str(bid), data = params)
+        result = self.request('PUT', 'bug/' + str(bid), json = params)
         if 'bugs' in result:
             return result['bugs']
         else:
             self.handle_error(result['message'])
 
     def bug_new(self, params):
-        result = self.request('POST', 'bug', data = params)
+        result = self.request('POST', 'bug', json = params)
         if 'bugs' in result:
             return result['bugs']
         else:
