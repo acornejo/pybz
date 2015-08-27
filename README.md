@@ -1,3 +1,44 @@
+# pybz
+
+pybz provides a  simple command line utility to interact with a bugzilla
+5.x server through their REST API. The specification of the REST API
+available from bugzilla is [documented here][restapi].
+
+# Installation
+
+The recommended installation method is through `pip`, namely:
+
+    sudo pip install pybz
+
+If your system doesn't have `pip` available, you can install it as
+follows:
+
+	curl --silent --show-error https://bootstrap.pypa.io/get-pip.py | sudo python
+
+# Configuration
+
+No configuration is required to use pybz, all parameters can be
+specified in the command line.
+
+To avoid having to specify the server url and the username (when using
+authentication) on every invocation, pybz supports reading these
+parameters from an initialization file stored at `~/.pybzrc`.
+
+Example `~/.pybzrc` file:
+
+    [core]
+    url = bugzilla.mozilla.org
+    username = alice@pybz.org
+    use_keyring = True
+    ssl_verify = True
+
+The initialization file cannot store a password, and although the
+password can be provided as a parameter in the command-line, this is
+strongly discouraged. Instead, when a username is specified but no
+password is provided, it will be requested through the standard input.
+If the `use_keyring` option is enabled, passwords will be securely
+stored in the system keyring.
+
 # Basic Examples
 
 Get info about bug 12345
@@ -36,6 +77,4 @@ them
 
     pybz get -f priority:P1 status:OPEN -s asigned_to | sort | uniq -c | sort
 
-get options:
-    --show-fields|-s field1,field2
-    --extra-fields|-e field1,field2
+[restapi][http://bugzilla.readthedocs.org/en/latest/api/index.html]

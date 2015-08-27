@@ -8,16 +8,20 @@ import sys
 import os
 
 """
-Special fields for setting:
-    alias
-    blocks
-    depends_on
-    comment
-    keyword
-    cc
-
+on creation, cc and flags are arrays
 
 """
+
+SPECIAL_FIELDS = {
+'blocks': {'prefix': ['+', '-','='], 'field': ['add', 'remove','set'], 'type': int},
+'dependson': {'prefix': ['+', '-','='], 'field': ['add', 'remove','set'],  'type': int},
+'keyword': {'prefix': ['+', '-','='], 'field': ['add', 'remove','set'], 'type': str},
+'alias': {'prefix': ['+', '-'], 'field': ['add', 'remove'], 'type': str},
+'see_also': {'prefix': ['+', '-'], 'field': ['add', 'remove'], 'type': str},
+'groups': {'prefix': ['+', '-'], 'field': ['add', 'remove'], 'type': str},
+'cc': {'prefix': ['+', '-'], 'field': ['add', 'remove'], 'type': str},
+'comment': {'field': 'body'}
+}
 
 CONFIG_FILE = os.path.expanduser('~/.pybz')
 MANDATORY_FIELDS=["product", "component", "summary", "version"]
@@ -26,15 +30,34 @@ DEFAULT_OUTPUT_FIELDS=["id", "status", "priority", "summary"]
 def print_error(msg):
     sys.stderr.write("pybz error: " + str(msg) + "\n")
 
-def process_fields(fields, valid_fields):
+def process_fields(fields, valid_fields, extra_processing={}):
     params = {}
     if fields:
         valid_fields = [f.lower() for f in valid_fields]
         for field in fields:
             name = field.split(":")[0].lower()
-            value = ":".join(field.split(":")[1:])
+            value = (":".join(field.split(":")[1:])).strip()
             if name in valid_fields:
-                params[name] = value.strip()
+                if name not in extra_processing:
+                    params[name] = value
+                else:
+                    if 'prefix' in extra_processing[name]:
+                        try:
+                            prefix = extra_processing[name]['prefix']
+                            idx = map(value.startswith,prefix).index(True)
+                            value = value[len(prefix[idx]):]
+                            value = extra_processing[name]['type'](value)
+                            field = extra_processing[name]['field'][idx]
+                            if name not in params:
+                                params[name] = {}
+                            if field not in params[name]:
+                                params[name][field] = []
+                            params[name][field].append(value)
+                        except:
+                            raise Exception ("Field '%s' must start with one of '%s'"%(name, ",".join(prefix)))
+                    else:
+                        params[name] = {}
+                        params[name][extra_processing['field']] = value
             else:
                 raise Exception ("Invalid field name '%s'"%name)
     return params
@@ -67,6 +90,9 @@ def main():
     get_parser.add_argument('-f', '--fields', metavar='FIELD', type=str,
             nargs='+', action='store', default=None,
             help='fields used for search')
+    get_parser.add_argument('-s', '--show-fields', metavar='FIELD', type=str,
+            nargs='+', action='store', default=None, dest='show_fields',
+            help='fields to return (default: id status priority summary)')
 
     set_parser = subparser.add_parser('set', help='set bug information')
     set_parser.add_argument('bugnum', type=int, nargs='+', help='bug number')
@@ -154,21 +180,27 @@ def main():
             for c in api.list_components(args.product):
                 print c
         elif args.command == 'get':
+            output_fields = DEFAULT_OUTPUT_FIELDS
+            if args.show_fields is not None:
+                output_fields = args.show_fields
             params = {}
             if args.bugnum:
                 params['id'] = args.bugnum
             params.update(process_fields(args.fields, api.list_fields()))
             for b in api.bug_get(params):
-                print_bug (b, DEFAULT_OUTPUT_FIELDS)
+                print_bug (b, output_fields)
         elif args.command == 'set':
             params = {'ids': args.bugnum}
-            params.update(process_fields(args.fields, api.list_fields()))
+            params.update(process_fields(args.fields, api.list_fields(), SPECIAL_FIELDS))
             for b in api.bug_set(params):
                 print b['id']
         elif args.command == 'new':
             params = process_fields(args.fields, api.list_fields())
+            for f in MANDATORY_FIELDS:
+                if f not in params:
+                    print_error("Missing mandatory field '%s'"%f)
             b = api.bug_new(params)
-            print_bug (b, DEFAULT_OUTPUT_FIELDS)
+            print b['id']
 
         if username and password:
             api.logout()

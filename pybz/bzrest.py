@@ -61,7 +61,8 @@ class API(object):
 
     def bug_set(self, params):
         bid = params['ids'][0]
-        result = self.request('PUT', 'bug/' + bid, data = params)
+        print params
+        result = self.request('PUT', 'bug/' + str(bid), data = params)
         if 'bugs' in result:
             return result['bugs']
         else:
