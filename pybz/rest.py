@@ -1,11 +1,11 @@
 import requests
 
 class API(object):
-    def __init__(self, base_url, ssl_verify = True):
+    def __init__(self, base_url, insecure = False, token = None):
         self.base_url = base_url
-        self.ssl_verify = ssl_verify
+        self.insecure = insecure
         self.headers = {"User-Agent": 'pybz-rest'}
-        self.token = None
+        self.token = token
 
         if self.base_url is None or self.base_url == "":
             self.handle_error('base_url not optional')
@@ -16,8 +16,9 @@ class API(object):
         if not self.base_url.endswith("rest/"):
             self.base_url = self.base_url + "rest/"
 
-        if not self.ssl_verify:
-            requests.packages.urllib3.disable_warnings()
+        if self.insecure:
+            if hasattr(requests, "packages"):
+                requests.packages.urllib3.disable_warnings()
 
         self.session = requests.Session()
 
@@ -27,7 +28,7 @@ class API(object):
     def request(self, method, path, **kwargs):
         url = self.base_url + path
         kwargs['headers'] = self.headers
-        kwargs['verify'] = self.ssl_verify
+        kwargs['verify'] = not self.insecure
         try:
             return self.session.request(method, url, **kwargs).json()
         except:

@@ -17,7 +17,7 @@ setup(
     install_requires=['keyring', 'requests'],
     entry_points={
         'console_scripts': [
-            'pybz = pybz.bzcmd:main',
+            'pybz = pybz.cmd:main',
         ]
     }
 )
