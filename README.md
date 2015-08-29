@@ -120,9 +120,13 @@ provides more details on these options.
 
 ## Basic
 
-Get info about bug 12345
+Get info about bug number 12345
 
-    pybz get 12345
+    pybz get -n 12345
+
+Get info about bug numbers 12345, 12346 and 12347
+
+    pybz get -n 12345 12346 12347
 
 Search for all bugs assigned to alice@pybz.org
 
@@ -136,29 +140,28 @@ Search for all open bugs with priority P1 or P2
 
     pybz get -f status:OPEN priority:P1 priority:P2
 
-(Re-)assign bug 12345 to bob@pybz.org and make it a P2
+(Re-)assign bug number 12345 to bob@pybz.org and make it a P2
 
-    pybz set 12345 -f assigned_to:bob@pybz.org priority:P2
+    pybz set -n 12345 -f assigned_to:bob@pybz.org priority:P2
 
-Upgrade bug 12345 to have priority P1
+Upgrade bug number 12345 to have priority P1
 
-    pybz set 12345 -f priority:P1
+    pybz set -n 12345 -f priority:P1
 
 Add charlie@pybz.org to the CC list of bug 12345, and remove
 alice@pybz.org from the CC list.
 
-    pybz set 12345 -f cc:+charlie@pybz.org cc:-alice@pybz.org
+    pybz set -n 12345 -f cc:+charlie@pybz.org cc:-alice@pybz.org
 
 Report a new bug
 
-    pybz new -f "summary:new and terrible bug" product:pybz priority:P2
-    assigned_to:alice@pybz.org
+    pybz new -f "summary:new and terrible bug" product:pybz priority:P2 assigned_to:alice@pybz.org
 
 ## Advanced
 
 Reassign all bugs from bob@pybz.org to charlie@pybz.org
 
-    pybz get -f assigned_to:bob@pybz.org -s id | xargs pybz set -f assigned_to:charlie@pybz.org
+    pybz get -f assigned_to:bob@pybz.org -s id | xargs pybz set -f assigned_to:charlie@pybz.org -n
 
 Display a list of developers sorted by the number of open P1 bugs assigned to
 them

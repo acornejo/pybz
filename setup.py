@@ -1,7 +1,7 @@
 from setuptools import setup
 import pybz.meta as meta
 
-readme = '\n' + open('README.md').read()
+readme = '\n' + open('README.rst').read()
 
 setup(
     author=meta.AUTHOR,
@@ -14,7 +14,7 @@ setup(
     long_description=readme,
     platforms=['all'],
     packages=['pybz'],
-    install_requires=['keyring', 'requests'],
+    install_requires=['keyring', 'requests', 'PyYAML'],
     entry_points={
         'console_scripts': [
             'pybz = pybz.cmd:main',

@@ -1,6 +1,6 @@
 all:
 
-.PHONY: clean virtualenv pip
+.PHONY: clean virtualenv pip dist install
 
 upload: dist
 	env/bin/pip install twine
@@ -10,6 +10,7 @@ build: env
 	env/bin/python setup.py build
 
 dist: env
+	pandoc README.md --from markdown --to rst -s -o README.rst
 	env/bin/python setup.py sdist
 
 install: env

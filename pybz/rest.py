@@ -1,11 +1,13 @@
 import requests
+import json
 
 class API(object):
-    def __init__(self, base_url, insecure = False, token = None):
+    def __init__(self, base_url, insecure = False, token = None, api_key = None):
         self.base_url = base_url
         self.insecure = insecure
         self.headers = {"User-Agent": 'pybz-rest'}
         self.token = token
+        self.api_key = api_key
 
         if self.base_url is None or self.base_url == "":
             self.handle_error('base_url not optional')
@@ -22,15 +24,23 @@ class API(object):
 
         self.session = requests.Session()
 
+        if self.api_key:
+            self.session.params['api_key'] = self.api_key
+
     def handle_error(self, message):
         raise Exception (message)
 
     def request(self, method, path, **kwargs):
         url = self.base_url + path
-        kwargs['headers'] = self.headers
+        headers = self.headers.copy()
+        if 'headers' in kwargs:
+            headers.update(kwargs['headers'])
+        kwargs['headers'] = headers
         kwargs['verify'] = not self.insecure
         try:
             return self.session.request(method, url, **kwargs).json()
+        except requests.exceptions.SSLError:
+            return {'message': 'Invalid SSL certificates, enable insecure access.'}
         except:
             return {'message': "Invalid rest endpoint '%s'"%url}
 
@@ -62,14 +72,16 @@ class API(object):
 
     def bug_set(self, params):
         bid = params['ids'][0]
-        result = self.request('PUT', 'bug/' + str(bid), json = params)
+        result = self.request('PUT', 'bug/' + str(bid),
+                data = json.dumps(params), headers={"content-type": "application/json"})
         if 'bugs' in result:
             return result['bugs']
         else:
             self.handle_error(result['message'])
 
     def bug_new(self, params):
-        result = self.request('POST', 'bug', json = params)
+        result = self.request('POST', 'bug',
+                data = json.dumps(params), headers={"content-type": "application/json"})
         if 'bugs' in result:
             return result['bugs']
         else:
