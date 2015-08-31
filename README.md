@@ -5,11 +5,18 @@ pybz provides a  simple command line utility to interact with a bugzilla
 REST API is
 [documented here](http://bugzilla.readthedocs.org/en/latest/api/index.html).
 
+This project came to life during a moment of desperation; I need to use
+bugzilla at work, I dislike the web interface, and every other tool I
+looked at would either refuse to authenticate with our server (perhaps
+because they use the now deprecated XMLRPC endpoint), or would lack a
+feature I needed. pybz was born as yet-another alternative to interact
+with bugzilla without using a web browser.
+
 # Installation
 
 The recommended installation method is through `pip`. Installing as root
 with pip is not recommended since it might create conflicts with other
-globally installed python packages.
+globally installed python packages (I am thinking about you `requests`).
 
     pip install --user pybz
 
@@ -23,11 +30,11 @@ follows:
 # Configuration
 
 No configuration is required to use pybz, all parameters can be
-specified in the command line. The server URL can be specified with the
-`--url` flag; a server URL is required to perform any operation on
-bugzilla. For operations that require authentication you must also
-specify a username, which can also be provided in the command-line with
-the `--username` flag.
+specified in the command line. A server URL is required to perform any
+operation on bugzilla, and can be specified with the `--url` flag. For
+operations that require authentication you must also specify a username,
+which can also be provided in the command-line with the `--username`
+flag.
 
 To avoid having to specify the server URL and the username on every
 invocation of `pybz`, these and other settings can be stored in an
@@ -89,8 +96,9 @@ bugs of with an OPEN status AND priority P1.
 
 Performing OR operations across different fields is not supported (for
 instance, if you wanted to find all bugs which have either a
-status OPEN or are have priority P1). For this you can use the
-quicksearch field, and follow the
+status OPEN or are have priority P1). This is not a limitation imposed
+by pybz but simply the specification of the bugzilla REST API. For more
+complex queries you can use the quicksearch field, and follow the
 [quicksearch API](https://bugzilla.mozilla.org/page.cgi?id=quicksearch.html)
 
 ## Updating bugs
@@ -108,9 +116,10 @@ and if you wanted to remove bug 12346 from the blocking list you
 would use `blocks:-12346`.
 
 All array like fields support the `+` and `-`, but not all of them
-support setting with the `=` operator. This is a limitation of the
-bugzilla API and not bugz. To see which fields support it simply try it
-out and pybz will notify you of unsupported operations.
+support setting with the `=` operator. Agian, this is simply the
+supported operations by the bugzilla API and not a choice made in bugz.
+To see which fields support it simply try it out and pybz will notify
+you of unsupported operations.
 
 # Examples
 
@@ -167,3 +176,20 @@ Display a list of developers sorted by the number of open P1 bugs assigned to
 them
 
     pybz get -f priority:P1 status:OPEN -s asigned_to | sort | uniq -c | sort
+
+# Troubleshooting
+
+## pybz hangs
+
+In some systems where a keyring is not available, I've seen the
+`keyring` package hang on import. To prevent this, simply disable the
+`use_keyring` option in the pybz initialization file, and do not specify
+this option in the command line. To see if this is your problem, open up
+a python console and import the keyring module.
+
+    $ python
+    Python 2.7.10 (default, Jul 13 2015, 12:05:58)
+        [GCC 4.2.1 Compatible Apple LLVM 6.1.0 (clang-602.0.53)] on darwin
+        Type "help", "copyright", "credits" or "license" for more
+        information.
+    >>> import keyring
