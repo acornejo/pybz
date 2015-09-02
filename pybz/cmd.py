@@ -2,7 +2,6 @@ import meta
 import rest
 import keyring
 import getpass
-import textwrap
 import ConfigParser
 import argparse
 import sys
@@ -15,38 +14,41 @@ MANDATORY_FIELDS = ["product", "component", "summary", "version"]
 
 DEFAULT_FIELDS = ["id", "status", "priority", "summary"]
 
-SETTABLE_FIELDS = ["alias", "assigned_to", "blocks", "depends_on", "cc",
+SETTABLE_FIELDS = [
+    "alias", "assigned_to", "blocks", "depends_on", "cc",
     "comment", "component",   "deadline", "dupe_of", "estimated_time",
-    "groups", "keywords", "op_sys","platform", "priority", "product",
+    "groups", "keywords", "op_sys", "platform", "priority", "product",
     "qa_contact", "reset_assigned_to", "reset_qa_contact", "resolution",
     "see_also", "status", "summary", "target_milestone", "url",
     "version", "whiteboard"]
 
-CREATING_FIELDS = ["product", "component", "summary", "version",
-    "description", "op_sys", "platform", "priority", "severity",
-    "alias", "assigned_to", "cc", "groups", "qa_contact", "status",
-    "resolution", "target_milestone"]
+CREATING_FIELDS = [
+    "product", "component", "summary", "version", "description",
+    "op_sys", "platform", "priority", "severity", "alias",
+    "assigned_to", "cc", "groups", "qa_contact", "status", "resolution",
+    "target_milestone"]
 
-GETTING_FIELDS = ["alias", "assigned_to", "blocks", "cc",
-    "classification", "component", "creation_time", "creator",
-    "deadline", "depends_on", "dupe_of", "estimated_time", "groups",
-    "id", "is_confirmed", "is_open", "keywords", "last_change_time",
-    "op_sys", "platform", "priority", "product", "qa_contact",
-    "remaining_time", "resolution", "see_also", "severity", "status",
-    "summary", "target_milestone", "url", "version", "whiteboard"]
+GETTING_FIELDS = [
+    "alias", "assigned_to", "blocks", "cc", "classification",
+    "component", "creation_time", "creator", "deadline", "depends_on",
+    "dupe_of", "estimated_time", "groups", "id", "is_confirmed",
+    "is_open", "keywords", "last_change_time", "op_sys", "platform",
+    "priority", "product", "qa_contact", "remaining_time", "resolution",
+    "see_also", "severity", "status", "summary", "target_milestone",
+    "url", "version", "whiteboard"]
 
 ARRAY_FIELDS = {
     'blocks': {
-        'prefix': ['+', '-','='],
-        'field': ['add', 'remove','set'],
+        'prefix': ['+', '-', '='],
+        'field': ['add', 'remove', 'set'],
         'type': int},
     'depends_on': {
-        'prefix': ['+', '-','='],
-        'field': ['add', 'remove','set'],
+        'prefix': ['+', '-', '='],
+        'field': ['add', 'remove', 'set'],
         'type': int},
     'keyword': {
-        'prefix': ['+', '-','='],
-        'field': ['add', 'remove','set'],
+        'prefix': ['+', '-', '='],
+        'field': ['add', 'remove', 'set'],
         'type': str},
     'alias': {
         'prefix': ['+', '-'],
@@ -73,18 +75,26 @@ OPTIONS = {
     'url': {},
     'insecure': {'default': False, 'type': bool},
     'use_keyring': {'default': False, 'type': bool},
-    'block': {'default': False, 'type': bool},
+    'yaml_output': {'default': False, 'type': bool},
     'username': {},
     'password': {},
     'token': {},
     'api_key': {},
-    'show_field_names': {'default': DEFAULT_FIELDS} }
+    'show_field_names': {'default': DEFAULT_FIELDS}}
 
-class folded_unicode(unicode): pass
-class literal_unicode(unicode): pass
+
+class folded_unicode(unicode):
+    pass
+
+
+class literal_unicode(unicode):
+    pass
+
 
 def folded_unicode_representer(dumper, data):
     return dumper.represent_scalar(u'tag:yaml.org,2002:str', data, style='>')
+
+
 def literal_unicode_representer(dumper, data):
     return dumper.represent_scalar(u'tag:yaml.org,2002:str', data, style='|')
 
@@ -109,11 +119,13 @@ class Options(object):
             else:
                 setattr(self, f, v.get('default'))
 
+
 def print_error(msg):
     sys.stderr.write("pybz: error: " + str(msg) + "\n")
 
+
 def process_fields(fields, valid_fields, array_fields={},
-        nested_fields={}):
+                   nested_fields={}):
     params = {}
     if fields:
         valid_fields = [f.lower() for f in valid_fields]
@@ -124,7 +136,7 @@ def process_fields(fields, valid_fields, array_fields={},
                 if name in array_fields:
                     try:
                         prefix = array_fields[name]['prefix']
-                        idx = map(value.startswith,prefix).index(True)
+                        idx = map(value.startswith, prefix).index(True)
                         value = value[len(prefix[idx]):]
                         value = array_fields[name]['type'](value)
                         field = array_fields[name]['field'][idx]
@@ -134,7 +146,8 @@ def process_fields(fields, valid_fields, array_fields={},
                             params[name][field] = []
                         params[name][field].append(value)
                     except:
-                        raise Exception ("Field '%s' must start with one of '%s'"%(name, ",".join(prefix)))
+                        raise Exception("Field '%s' must start with '%s'"
+                                        % (name, ",".join(prefix)))
                 elif name in nested_fields:
                     subname = nested_fields[name]['field']
                     params[name] = {}
@@ -148,8 +161,9 @@ def process_fields(fields, valid_fields, array_fields={},
                     else:
                         params[name] = value
             else:
-                raise Exception ("Invalid field name '%s'"%name)
+                raise Exception("Invalid field name '%s'" % name)
     return params
+
 
 def stringify(v):
     if isinstance(v, list):
@@ -160,84 +174,101 @@ def stringify(v):
         return str(v)
 
 
-def print_bug(b, output_fields, block=False):
-    if not block:
+def print_bug(b, output_fields, yaml_output=False):
+    if not yaml_output:
         fields = []
         for f in output_fields:
             if f in b:
                 fields.append(stringify(b[f]))
         print " ".join(fields)
     else:
-        obj = dict((f,b[f]) for f in output_fields if f in b)
-        print yaml.safe_dump(obj, explicit_end=True, default_flow_style=False, width=70)
+        obj = dict((f, b[f]) for f in output_fields if f in b)
+        sys.stdout.write(yaml.safe_dump(obj, explicit_end=True,
+                         default_flow_style=False, width=70))
 
-def main():
-    # Argument parser
-    parser = argparse.ArgumentParser(description=meta.DESCRIPTION + " " + meta.VERSION,
-            epilog = "For more documentation go here: https://github.com/acornejo/pybz")
+
+def create_argparser():
+    parser = argparse.ArgumentParser(
+        prog='pybz',
+        description=meta.DESCRIPTION,
+        epilog="Full documentation here: https://github.com/acornejo/pybz")
+    parser.add_argument('--version', '-V', action='version',
+                        version='%(prog)s v' + meta.VERSION)
     parser.add_argument('--url', action='store', type=str,
-            default=None, help='bugzilla server http url')
+                        default=None, help='bugzilla server http url')
     parser.add_argument('--username', '-u', action='store', type=str,
-            default=None, help='bugzilla username')
+                        default=None, help='bugzilla username')
     parser.add_argument('--password', '-p', action='store', type=str,
-            default=None, help='bugzilla password')
+                        default=None, help='bugzilla password')
     parser.add_argument('--token', '-t', action='store', type=str,
-            default=None, help='bugzilla token')
+                        default=None, help='bugzilla token')
     parser.add_argument('--api-key', action='store', type=str,
-            dest='api_key', default=None, help='bugzilla API key')
+                        dest='api_key', default=None, help='bugzilla API key')
     parser.add_argument('--insecure', '-k', action='store_true',
-            dest='insecure', default=None,
-            help='allow insecure SSL certificate')
+                        dest='insecure', default=None,
+                        help='allow insecure SSL certificate')
     parser.add_argument('--use-keyring', '-K', action='store_true',
-            dest='use_keyring', default=None,
-            help='use keyring to store/retrieve password')
+                        dest='use_keyring', default=None,
+                        help='use keyring to store/retrieve password')
 
     subparser = parser.add_subparsers(dest='command', metavar='COMMAND')
 
     new_parser = subparser.add_parser('new', help='create new bug')
     new_parser.add_argument('-f', '--fields', metavar='FIELD', type=str,
-            nargs='+', required=True, action='store', default=None,
-            help='field(s) to be set')
+                            nargs='+', required=True, action='store',
+                            default=None, help='field(s) to be set')
 
     get_parser = subparser.add_parser('get', help='get bug information')
     get_parser.add_argument('-n', '--bugnum', metavar='BUGNUM',
-            type=int, dest='bugnum', nargs='+', action='store',
-            default=None, help='bug number(s)')
+                            type=int, dest='bugnum', nargs='+',
+                            action='store', default=None,
+                            help='bug number(s)')
     get_parser.add_argument('-f', '--fields', metavar='FIELD', type=str,
-            nargs='+', action='store', default=None,
-            help='field(s) used for search')
+                            nargs='+', action='store', default=None,
+                            help='field(s) used for search')
     get_parser.add_argument('-s', '--show-field-names', metavar='NAME',
-            type=str, nargs='+', action='store', default=None,
-            dest='show_field_names',
-            help='list of the names of the fields to return')
+                            type=str, nargs='+', action='store',
+                            default=None, dest='show_field_names',
+                            help='list of the names of the fields to return')
     get_parser.add_argument('--yaml-output', '-y', action='store_true',
-            dest='block', default=False, help='output in yaml format')
+                            dest='yaml_output', default=False,
+                            help='output in yaml format')
 
     set_parser = subparser.add_parser('set', help='set bug information')
     set_parser.add_argument('-n', '--bugnum', metavar='BUGNUM',
-            type=int, dest='bugnum', nargs='+', action='store',
-            required=True, default=None, help='bug number(s)')
+                            type=int, dest='bugnum', nargs='+',
+                            action='store', required=True, default=None,
+                            help='bug number(s)')
     set_parser.add_argument('-f', '--fields', metavar='FIELD', type=str,
-            nargs='+', required=True, action='store', default=None,
-            help='field(s) to be set')
+                            nargs='+', required=True, action='store',
+                            default=None, help='field(s) to be set')
 
-    field_parser  = subparser.add_parser('list-fields',
-            help='list all available bug fields')
-    product_parser  = subparser.add_parser('list-products',
-            help='list all available bug products')
-    component_parser = subparser.add_parser('list-components',
-            help='list all components for a given product')
+    subparser.add_parser('list-fields', help='list all available bug fields')
+    subparser.add_parser('list-products',
+                         help='list all available bug products')
+    component_parser = subparser.add_parser(
+        'list-components',
+        help='list all components for a given product')
     component_parser.add_argument('product', default=None, type=str,
-            help='product name')
+                                  help='product name')
 
-    args = parser.parse_args()
+    return parser
+
+
+def main():
+    # Argument parser
+    argparser = create_argparser()
+    args = argparser.parse_args()
+
+    if args.command == 'get' and args.bugnum is None and args.fields is None:
+        argparser.error('Must specify either a bug (-n) or a field (-f)')
 
     # Config parser
     config = ConfigParser.ConfigParser()
     config.read(CONFIG_FILE)
 
     # Get options from config and args
-    opts = Options (OPTIONS, config, args)
+    opts = Options(OPTIONS, config, args)
 
     # Get password through keyring or stdin
     if opts.username is not None:
@@ -253,7 +284,6 @@ def main():
             return 1
         elif opts.use_keyring:
             keyring.set_password('pybz', opts.username, opts.password)
-
 
     try:
         # Create API connection
@@ -274,28 +304,26 @@ def main():
             for c in api.list_components(args.product):
                 print c
         elif args.command == 'get':
-            if args.bugnum is None and args.fields is None:
-                print_error('Must specify either a bug (-n) or a field (-f)')
-                return 1
             params = {}
             if args.bugnum:
                 params['id'] = args.bugnum
             params.update(process_fields(args.fields,
-                set(GETTING_FIELDS + api.list_fields())))
+                          set(GETTING_FIELDS + api.list_fields())))
             for b in api.bug_get(params):
-                print_bug (b, opts.show_field_names, opts.block)
+                print_bug(b, opts.show_field_names, opts.yaml_output)
         elif args.command == 'set':
             params = {'ids': args.bugnum}
             params.update(process_fields(args.fields,
-                set(SETTABLE_FIELDS + api.list_fields()),
-                ARRAY_FIELDS, NESTED_FIELDS))
+                          set(SETTABLE_FIELDS + api.list_fields()),
+                          ARRAY_FIELDS, NESTED_FIELDS))
             for b in api.bug_set(params):
                 print b['id']
         elif args.command == 'new':
-            params = process_fields(args.fields, set(CREATING_FIELDS + api.list_fields()))
+            params = process_fields(args.fields,
+                                    set(CREATING_FIELDS + api.list_fields()))
             for f in MANDATORY_FIELDS:
                 if f not in params:
-                    print_error("Missing mandatory field '%s'"%f)
+                    print_error("Missing mandatory field '%s'" % f)
                     return 1
             b = api.bug_new(params)
             print b['id']
@@ -303,8 +331,6 @@ def main():
         if opts.username and opts.password:
             api.logout()
     except Exception as inst:
-        import traceback
-        traceback.print_exc()
         print_error(inst)
         if opts.username and opts.password:
             api.logout()

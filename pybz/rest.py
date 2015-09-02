@@ -1,8 +1,9 @@
 import requests
 import json
 
+
 class API(object):
-    def __init__(self, base_url, insecure = False, token = None, api_key = None):
+    def __init__(self, base_url, insecure=False, token=None, api_key=None):
         self.base_url = base_url
         self.insecure = insecure
         self.headers = {"User-Agent": 'pybz-rest'}
@@ -26,9 +27,11 @@ class API(object):
 
         if self.api_key:
             self.session.params['api_key'] = self.api_key
+        elif self.token:
+            self.session.params['token'] = self.token
 
     def handle_error(self, message):
-        raise Exception (message)
+        raise Exception(message)
 
     def request(self, method, path, **kwargs):
         url = self.base_url + path
@@ -40,15 +43,16 @@ class API(object):
         try:
             return self.session.request(method, url, **kwargs).json()
         except requests.exceptions.SSLError:
-            return {'message': 'Invalid SSL certificates, enable insecure access.'}
+            return {'message':
+                    'Invalid SSL certificates, enable insecure access.'}
         except:
-            return {'message': "Invalid rest endpoint '%s'"%url}
+            return {'message': "Invalid rest endpoint '%s'" % url}
 
     def login(self, username, password):
         if username is None or password is None or password == "":
             self.handle_error('Cannot login without username and password')
         else:
-            result = self.request('GET', 'login', params = {
+            result = self.request('GET', 'login', params={
                 'login': username,
                 'password': password})
             if 'token' in result:
@@ -64,7 +68,7 @@ class API(object):
                 self.handle_error(result['message'])
 
     def bug_get(self, params):
-        result = self.request('GET', 'bug', params = params)
+        result = self.request('GET', 'bug', params=params)
         if 'bugs' in result:
             return result['bugs']
         else:
@@ -73,7 +77,8 @@ class API(object):
     def bug_set(self, params):
         bid = params['ids'][0]
         result = self.request('PUT', 'bug/' + str(bid),
-                data = json.dumps(params), headers={"content-type": "application/json"})
+                              data=json.dumps(params),
+                              headers={"content-type": "application/json"})
         if 'bugs' in result:
             return result['bugs']
         else:
@@ -81,7 +86,8 @@ class API(object):
 
     def bug_new(self, params):
         result = self.request('POST', 'bug',
-                data = json.dumps(params), headers={"content-type": "application/json"})
+                              data=json.dumps(params),
+                              headers={"content-type": "application/json"})
         if 'bugs' in result:
             return result['bugs']
         else:
@@ -93,20 +99,24 @@ class API(object):
             return [f['name'] for f in result['fields'] if 'name' in f
                     and f['name'] != 'bug_id']
         else:
-            self.handle_error("can't retrieve fields: '%s'" % result['message'])
+            self.handle_error("can't retrieve fields: '%s'"
+                              % result['message'])
 
     def list_products(self):
-        result = self.request('GET', 'product', {'type': 'accessible'})
+        result = self.request('GET', 'product', params={'type': 'accessible'})
         if 'products' in result:
             return [p['name'] for p in result['products'] if 'name' in p]
         else:
-            self.handle_error("can't retrieve products: '%s'" % result['message'])
+            self.handle_error("can't retrieve products: '%s'"
+                              % result['message'])
 
     def list_components(self, product):
-        result = self.request('GET', 'product', {'names': product})
+        result = self.request('GET', 'product', params={'names': product})
         if 'products' in result:
             for p in result['products']:
                 if 'name' in p and p['name'].lower() == product.lower():
                     return [c['name'] for c in p['components']]
+            self.handle_error("can't find product '%s'" % product)
         else:
-            self.handle_error("can't retrieve components: '%s'" % result['message'])
+            self.handle_error("can't retrieve components: '%s'"
+                              % result['message'])

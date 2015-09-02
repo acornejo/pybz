@@ -1,6 +1,10 @@
 all:
 
-.PHONY: clean virtualenv pip dist install
+.PHONY: clean virtualenv pip dist install test
+
+test:
+	flake8 setup.py pybz/*.py test/*.py
+	python -m unittest discover
 
 upload: dist
 	env/bin/pip install twine
@@ -26,4 +30,4 @@ pip:
 	@hash pip || ( curl --silent --show-error https://bootstrap.pypa.io/get-pip.py | sudo python )
 
 clean:
-	rm -fr env pybz/*.pyc build dist pybz.egg-info
+	rm -fr env pybz/*.pyc build dist *.egg-info README.rst
