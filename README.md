@@ -5,22 +5,23 @@ pybz provides a  simple command line utility to interact with a bugzilla
 REST API is
 [documented here](http://bugzilla.readthedocs.org/en/latest/api/index.html).
 
-This project came to life during a moment of desperation; I need to use
-bugzilla at work, I dislike the web interface, and every other tool I
-looked at would either refuse to authenticate with our server (perhaps
-because they use the now deprecated XMLRPC endpoint), or would lack a
-feature I needed. pybz was born as yet-another alternative to interact
-with bugzilla without using a web browser.
+*Why?* Short answer: necessity. I need to use bugzilla at work, I
+dislike the web interface, and every other tool I looked at would either
+refuse to authenticate with our server (perhaps because they use the now
+deprecated XMLRPC endpoint), or lack a feature I needed. Thus, `pybz` came
+to be as yet-another alternative to interact with bugzilla without using
+a web browser.
 
 # Installation
 
 The recommended installation method is through `pip`. Installing as root
-with pip is not recommended since it might create conflicts with other
-globally installed python packages (I am thinking about you `requests`).
+with pip might create conflicts with other globally installed python
+packages (I am looking about you `requests`); therefore I recommend with
+pip on your user folder.
 
     pip install --user pybz
 
-This will install pybz in `~/.local/bin`.
+This will install `pybz` in `~/.local/bin`.
 
 If your system doesn't have `pip` available, you can install it as
 follows:
@@ -29,16 +30,16 @@ follows:
 
 # Configuration
 
-No configuration is required to use pybz, all parameters can be
+No configuration is required to use `pybz`, all parameters can be
 specified in the command line. A server URL is required to perform any
 operation on bugzilla, and can be specified with the `--url` flag. For
 operations that require authentication you must also specify a username,
-which can also be provided in the command-line with the `--username`
+which can also be provided in the command line with the `--username`
 flag.
 
 To avoid having to specify the server URL and the username on every
-invocation of `pybz`, these and other settings can be stored in an
-initialization file stored at `~/.pybz`.
+invocation of `pybz`, these and other settings can be stored in a
+per-user configuration file stored at `~/.pybz`.
 
 Example `~/.pybz` file:
 
@@ -49,7 +50,7 @@ Example `~/.pybz` file:
     insecure = False
 
 Although possible, it is discouraged to store the password in the
-initialization file or to provide it through the command-line.
+initialization file or to provide it through the command line.
 When a username is specified but no password is provided, it will be
 requested through the standard input. If the `use_keyring` option is
 enabled, passwords will be securely stored and retrieved using the
@@ -58,7 +59,7 @@ system keyring.
 # Usage
 
 Use the `-h` or `--help` flags to get information about all the
-calling options. pybz supports the following commands
+calling options. `pybz` supports the following commands
 
 command          |   description
 -----------------|------------------------------------------
@@ -82,32 +83,36 @@ searching.
 ## Searching for bugs
 
 The `get` command is used to search for bugs, in the simplest form you
-simply enter a list of numeric bug id's to retrieve from the server.
+use the `-n` flag specify a list of numeric bug id's to be retrieved
+from the server.
 
-You can also use fields to create more complex queries. Fields must be
-of the form `name:value`, if your value must contain spaces then you
-must quote the whole field as follows `"name:value with spaces"`.
+Bugs can also be retrieved using field queries using the `-f` flag.
+Fields must be of the form `name:value`, if your value must contain
+spaces then you must quote the whole field as follows `"name:value with
+spaces"`.
 
-When searching different field names are searched as an AND,
-and if the same field name appears multiple times then it is used as an
-OR. So searching for "priority:P1 priority:P2" returns all bugs of
-priority P1 OR P2, while searching for "status:OPEN priority:P1" returns
-bugs of with an OPEN status AND priority P1.
+When multiple field queries on the different field name are searched
+using an AND operation, and field queries on the same field name are
+searched using an OR operation. For instance, searching for "priority:P1
+priority:P2" returns all bugs of priority P1 OR P2, while searching for
+"status:OPEN priority:P1" returns bugs of with an OPEN status AND
+priority P1.
 
 Performing OR operations across different fields is not supported (for
 instance, if you wanted to find all bugs which have either a
 status OPEN or are have priority P1). This is not a limitation imposed
-by pybz but simply the specification of the bugzilla REST API. For more
+by `pybz` but simply the specification of the bugzilla REST API. For more
 complex queries you can use the quicksearch field, and follow the
 [quicksearch API](https://bugzilla.mozilla.org/page.cgi?id=quicksearch.html)
 
 ## Updating bugs
 
-Updating bugs uses the same field syntax as searching. The only
-difference is that some fields are treated specially, in particular the
-fields `blocks`, `depends_on`, `see_also`, `groups`, `cc` and
-`keywords`. This is because these fields do not contain a single value,
-but instead contain an array of values.
+Updating bugs uses the same field syntax as searching. Fields do not
+contain a single value but a list of values require different syntax.
+Specifically, the fields `blocks`, `depends_on`, `see_also`, `groups`,
+`cc` and `keywords` require using an extended syntax using the `+` to
+add values to the array, `-` to remove values from the array and `=` to
+replace the values in the array with new ones.
 
 If you want to specify that a is blocked by bug 12345 and 12346 then you
 would do `blocks:=12345 blocks:=12346`. If instead you wanted to add bug
@@ -116,10 +121,10 @@ and if you wanted to remove bug 12346 from the blocking list you
 would use `blocks:-12346`.
 
 All array like fields support the `+` and `-`, but not all of them
-support setting with the `=` operator. Agian, this is simply the
-supported operations by the bugzilla API and not a choice made in bugz.
-To see which fields support it simply try it out and pybz will notify
-you of unsupported operations.
+support setting with the `=` operator. This reflects supported
+operations by the bugzilla API and not a choice made in `pybz` To see
+which fields support it simply try it out and `pybz` will notify you of
+unsupported operations.
 
 # Examples
 
@@ -157,16 +162,17 @@ Upgrade bug number 12345 to have priority P1
 
     pybz set -n 12345 -f priority:P1
 
-Add charlie@pybz.org to the CC list of bug 12345, and remove
-alice@pybz.org from the CC list.
-
-    pybz set -n 12345 -f cc:+charlie@pybz.org cc:-alice@pybz.org
-
 Report a new bug
 
     pybz new -f "summary:new and terrible bug" product:pybz priority:P2 assigned_to:alice@pybz.org
 
 ## Advanced
+
+Add charlie@pybz.org to the CC list of bug 12345, remove
+alice@pybz.org from the CC list, and add a comment describing the
+change (all in one command!).
+
+    pybz set -n 12345 -f cc:+charlie@pybz.org cc:-alice@pybz.org "comment:adding charlie to the discussion, and removing alice"
 
 Reassign all bugs from bob@pybz.org to charlie@pybz.org
 
@@ -181,11 +187,11 @@ them
 
 ## pybz hangs
 
-In some systems where a keyring is not available, I've seen the
-`keyring` package hang on import. To prevent this, simply disable the
-`use_keyring` option in the pybz initialization file, and do not specify
-this option in the command line. To see if this is your problem, open up
-a python console and import the keyring module.
+The python keyring has been known to hang on systems where no keyring
+can be found. To prevent this, simply disable the `use_keyring` option
+in the `pybz` configuration file, and do not specify this option in the
+command line. To see if this is your problem, open up a python console
+and import the keyring module.
 
     $ python
     Python 2.7.10 (default, Jul 13 2015, 12:05:58)
