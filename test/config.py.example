@@ -1,9 +1,0 @@
-# fill in the required info and copy this file to config.py
-# landfill.bugzilla.org is a good server to run your tests against
-
-endpoint = {
-    'url': 'YOUR_BUGZILLA_ENDPOINT'
-    'username': 'YOUR_BUGZILLA_USERNAME',
-    'password': 'YOUR_BUGZILLA_PASSWORD',
-    'api_key': 'YOUR_BUGZILLA_API_KEY'
-}

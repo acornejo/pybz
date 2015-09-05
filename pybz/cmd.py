@@ -35,7 +35,11 @@ GETTING_FIELDS = [
     "is_open", "keywords", "last_change_time", "op_sys", "platform",
     "priority", "product", "qa_contact", "remaining_time", "resolution",
     "see_also", "severity", "status", "summary", "target_milestone",
-    "url", "version", "whiteboard"]
+    "url", "version", "whiteboard", "quicksearch"]
+
+FIELD_ALIAS = {
+    'comment': 'longdesc'
+}
 
 ARRAY_FIELDS = {
     'blocks': {
@@ -125,13 +129,15 @@ def print_error(msg):
 
 
 def process_fields(fields, valid_fields, array_fields={},
-                   nested_fields={}):
+                   nested_fields={}, field_alias={}):
     params = {}
     if fields:
         valid_fields = [f.lower() for f in valid_fields]
         for field in fields:
             name = field.split(":")[0].lower()
             value = (":".join(field.split(":")[1:])).strip()
+            if name in field_alias:
+                name = field_alias[name]
             if name in valid_fields:
                 if name in array_fields:
                     try:
@@ -219,6 +225,7 @@ def create_argparser():
                             default=None, help='field(s) to be set')
 
     get_parser = subparser.add_parser('get', help='get bug information')
+
     get_parser.add_argument('-n', '--bugnum', metavar='BUGNUM',
                             type=int, dest='bugnum', nargs='+',
                             action='store', default=None,
@@ -255,13 +262,18 @@ def create_argparser():
     return parser
 
 
-def main():
+def main(cmd_args=None):
     # Argument parser
     argparser = create_argparser()
-    args = argparser.parse_args()
+    args = argparser.parse_args(cmd_args)
 
-    if args.command == 'get' and args.bugnum is None and args.fields is None:
-        argparser.error('Must specify either a bug (-n) or a field (-f)')
+    if args.command == 'get':
+        if args.bugnum is None and args.fields is None:
+            argparser.error('one of the arguments -n/--bugnum '
+                            '-f/--fields is required')
+        elif args.bugnum is not None and args.fields is not None:
+            argparser.error('argument -n/--bugnum not allowed with'
+                            'argument -f/--fields')
 
     # Config parser
     config = ConfigParser.ConfigParser()
@@ -271,26 +283,30 @@ def main():
     opts = Options(OPTIONS, config, args)
 
     # Get password through keyring or stdin
-    if opts.username is not None:
-        if opts.password is None:
-            if opts.use_keyring:
-                opts.password = keyring.get_password('pybz', opts.username)
+    if not opts.api_key and not opts.token:
+        use_login = True
+        if opts.username is not None:
             if opts.password is None:
-                if sys.stdin.isatty():
-                    print "Username: ", opts.username
-                    opts.password = getpass.getpass()
-        if opts.password is None or opts.password == "":
-            print_error('Cannot login without password')
-            return 1
-        elif opts.use_keyring:
-            keyring.set_password('pybz', opts.username, opts.password)
+                if opts.use_keyring:
+                    opts.password = keyring.get_password('pybz', opts.username)
+                if opts.password is None:
+                    if sys.stdin.isatty():
+                        print "Username: ", opts.username
+                        opts.password = getpass.getpass()
+            if opts.password is None or opts.password == "":
+                print_error('Cannot login without password')
+                return 1
+            elif opts.use_keyring:
+                keyring.set_password('pybz', opts.username, opts.password)
+    else:
+        use_login = False
 
     try:
         # Create API connection
         api = rest.API(opts.url, opts.insecure, opts.token, opts.api_key)
 
         # Login if appropriate
-        if opts.username and opts.password:
+        if use_login:
             api.login(opts.username, opts.password)
 
         # Process commands
@@ -308,7 +324,8 @@ def main():
             if args.bugnum:
                 params['id'] = args.bugnum
             params.update(process_fields(args.fields,
-                          set(GETTING_FIELDS + api.list_fields())))
+                          set(GETTING_FIELDS + api.list_fields()),
+                          field_alias=FIELD_ALIAS))
             for b in api.bug_get(params):
                 print_bug(b, opts.show_field_names, opts.yaml_output)
         elif args.command == 'set':
@@ -328,11 +345,11 @@ def main():
             b = api.bug_new(params)
             print b['id']
 
-        if opts.username and opts.password:
+        if use_login:
             api.logout()
     except Exception as inst:
         print_error(inst)
-        if opts.username and opts.password:
+        if use_login:
             api.logout()
         return 1
 

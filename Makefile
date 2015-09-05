@@ -3,11 +3,12 @@ all:
 .PHONY: clean virtualenv pip dist install test
 
 test:
-	flake8 setup.py pybz/*.py test/*.py
-	python -m unittest discover
+	env/bin/pip install -r dev-requirements.txt
+	env/bin/flake8 setup.py pybz/*.py test/*.py
+	env/bin/python -m unittest discover
 
 upload: dist
-	env/bin/pip install twine
+	env/bin/pip install -r dev-requirements.txt
 	env/bin/twine upload dist/*.tar.gz
 
 build: env

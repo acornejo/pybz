@@ -2,6 +2,30 @@ import requests
 import json
 
 
+class SSLException(Exception):
+    pass
+
+
+class URLException(Exception):
+    pass
+
+
+class RestException(Exception):
+    pass
+
+
+class CallException(Exception):
+    pass
+
+
+class LoginException(Exception):
+    pass
+
+
+class NotFoundException(Exception):
+    pass
+
+
 class API(object):
     def __init__(self, base_url, insecure=False, token=None, api_key=None):
         self.base_url = base_url
@@ -11,7 +35,7 @@ class API(object):
         self.api_key = api_key
 
         if self.base_url is None or self.base_url == "":
-            self.handle_error('base_url not optional')
+            raise URLException('base_url not optional')
 
         if not self.base_url.endswith("/"):
             self.base_url = self.base_url + "/"
@@ -30,9 +54,6 @@ class API(object):
         elif self.token:
             self.session.params['token'] = self.token
 
-    def handle_error(self, message):
-        raise Exception(message)
-
     def request(self, method, path, **kwargs):
         url = self.base_url + path
         headers = self.headers.copy()
@@ -43,14 +64,13 @@ class API(object):
         try:
             return self.session.request(method, url, **kwargs).json()
         except requests.exceptions.SSLError:
-            return {'message':
-                    'Invalid SSL certificates, enable insecure access.'}
+            raise SSLException('Bad SSL certificates, enable insecure access.')
         except:
-            return {'message': "Invalid rest endpoint '%s'" % url}
+            raise RestException("Invalid rest endpoint '%s'" % url)
 
     def login(self, username, password):
         if username is None or password is None or password == "":
-            self.handle_error('Cannot login without username and password')
+            raise LoginException('Cannot login without username and password')
         else:
             result = self.request('GET', 'login', params={
                 'login': username,
@@ -59,20 +79,23 @@ class API(object):
                 self.token = result['token']
                 self.session.params['token'] = self.token
             else:
-                self.handle_error(result['message'])
+                raise LoginException(result['message'])
 
     def logout(self):
         if self.token:
             result = self.request('GET', 'logout')
             if 'message' in result:
-                self.handle_error(result['message'])
+                raise CallException(result['message'])
+            else:
+                self.token = None
+                del self.session.params['token']
 
     def bug_get(self, params):
         result = self.request('GET', 'bug', params=params)
         if 'bugs' in result:
             return result['bugs']
         else:
-            self.handle_error(result['message'])
+            raise CallException(result['message'])
 
     def bug_set(self, params):
         bid = params['ids'][0]
@@ -82,7 +105,7 @@ class API(object):
         if 'bugs' in result:
             return result['bugs']
         else:
-            self.handle_error(result['message'])
+            raise CallException(result['message'])
 
     def bug_new(self, params):
         result = self.request('POST', 'bug',
@@ -91,7 +114,7 @@ class API(object):
         if 'bugs' in result:
             return result['bugs']
         else:
-            self.handle_error(result['message'])
+            raise CallException(result['message'])
 
     def list_fields(self):
         result = self.request('GET', 'field/bug')
@@ -99,16 +122,14 @@ class API(object):
             return [f['name'] for f in result['fields'] if 'name' in f
                     and f['name'] != 'bug_id']
         else:
-            self.handle_error("can't retrieve fields: '%s'"
-                              % result['message'])
+            raise CallException(result['message'])
 
     def list_products(self):
         result = self.request('GET', 'product', params={'type': 'accessible'})
         if 'products' in result:
             return [p['name'] for p in result['products'] if 'name' in p]
         else:
-            self.handle_error("can't retrieve products: '%s'"
-                              % result['message'])
+            raise CallException(result['message'])
 
     def list_components(self, product):
         result = self.request('GET', 'product', params={'names': product})
@@ -116,7 +137,6 @@ class API(object):
             for p in result['products']:
                 if 'name' in p and p['name'].lower() == product.lower():
                     return [c['name'] for c in p['components']]
-            self.handle_error("can't find product '%s'" % product)
+            raise NotFoundException("can't find product '%s'" % product)
         else:
-            self.handle_error("can't retrieve components: '%s'"
-                              % result['message'])
+            raise CallException(result['message'])
